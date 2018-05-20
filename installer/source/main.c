@@ -187,6 +187,9 @@ int kernel_payload(struct thread *td, struct kernel_payload_args* args)
   // UART Enabler
   *(char *)(kernel_base + 0x1997BC8) = 0;
 
+  //Internel EAP Part. Key
+  //*(char *)(kernel_base + 0x258CCD0)
+
   // debug settings patchs
   *(char *)(kernel_base + 0x1B6D086) |= 0x14;
   *(char *)(kernel_base + 0x1B6D0A9) |= 3;
