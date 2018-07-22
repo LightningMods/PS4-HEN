@@ -1,14 +1,17 @@
-# PS4-5.01-Update-Blocker-HEN
+# PS4-Just-The-Block-505
 
-This Payload contains Update Blocker, and HEN in 1!
 
-- Added correct 5.01 Debug menu patches
 
 -----More Info-----
 
-The update blocker creates a folder in /update and unlinks the folder DO NOT REMOVE IT You WILL still get the notifcation of a update let the update download to %100 then you will be greeted with a "Cannot download" message and you cannot install it either so now you cannot update it accidentally...
+Simple, Update Blocker .. none of those extra features
 
-You can use my website to inject it without injecting it via PC
+- No message
+- No HEN
+- No FTP
+- NO Kernel Patches
+
+** Just the Block**
 
 http://ps4exploits.darksoftware.xyz
 
