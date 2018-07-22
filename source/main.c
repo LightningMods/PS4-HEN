@@ -140,6 +140,7 @@ int _main(struct thread *td)
 
 	// patch some things in the kernel (sandbox, prison, debug settings etc..)
 	syscall(11,kpayload,td);
+	
 unlink ("/update/PS4UPDATE.PUP");
 mkdir ("/update/PS4UPDATE.PUP", 0777);
 unlink ("/update/PS4UPDATE.net.pup");
