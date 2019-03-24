@@ -1,0 +1,163 @@
+
+Allocating common symbols
+Common symbol       size              file
+
+memcpy              0x8               build/ps4.o
+sock                0x4               build/main.o
+sceSysUtilSendSystemNotificationWithText
+                    0x8               build/ps4.o
+__error             0x8               build/ps4.o
+sceKernelLoadStartModule
+                    0x8               build/ps4.o
+memset              0x8               build/ps4.o
+sprintf             0x8               build/ps4.o
+
+Discarded input sections
+
+ .data          0x0000000000000000        0x0 /tmp/ccnkU6fr.o
+ .bss           0x0000000000000000        0x0 /tmp/ccnkU6fr.o
+ .data          0x0000000000000000        0x0 /tmp/ccKL7M6K.o
+ .bss           0x0000000000000000        0x0 /tmp/ccKL7M6K.o
+ .text          0x0000000000000000        0x0 build/debug.o
+ .data          0x0000000000000000        0x0 build/debug.o
+ .bss           0x0000000000000000        0x0 build/debug.o
+ .text.unlikely.notify
+                0x0000000000000000        0x0 build/debug.o
+ .comment       0x0000000000000000       0x36 build/debug.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 build/debug.o
+ .eh_frame      0x0000000000000000       0x38 build/debug.o
+ .text          0x0000000000000000        0x0 build/embed.o
+ .data          0x0000000000000000        0x0 build/embed.o
+ .bss           0x0000000000000000        0x0 build/embed.o
+ .text          0x0000000000000000        0x0 build/main.o
+ .data          0x0000000000000000        0x0 build/main.o
+ .bss           0x0000000000000000        0x0 build/main.o
+ .text.unlikely.install_payload
+                0x0000000000000000        0x0 build/main.o
+ .text.unlikely._main
+                0x0000000000000000        0x0 build/main.o
+ .comment       0x0000000000000000       0x36 build/main.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 build/main.o
+ .eh_frame      0x0000000000000000       0xa0 build/main.o
+ COMMON         0x0000000000000000        0x4 build/main.o
+ .data          0x0000000000000000        0x0 build/ps4.o
+ .bss           0x0000000000000000        0x0 build/ps4.o
+ .text.unlikely.loadModule
+                0x0000000000000000        0x0 build/ps4.o
+ .text.unlikely.initKernel
+                0x0000000000000000        0x0 build/ps4.o
+ .text.unlikely.initLibc
+                0x0000000000000000        0x0 build/ps4.o
+ .text.unlikely.initSysUtil
+                0x0000000000000000        0x0 build/ps4.o
+ .comment       0x0000000000000000       0x36 build/ps4.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 build/ps4.o
+ .eh_frame      0x0000000000000000       0x88 build/ps4.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+LOAD /tmp/ccnkU6fr.o
+LOAD /tmp/ccKL7M6K.o
+LOAD build/debug.o
+LOAD build/embed.o
+LOAD build/main.o
+LOAD build/ps4.o
+                0x0000000926200000                . = 0x926200000
+
+.text           0x0000000926200000      0x41e
+ *(.text.start)
+ *(.text*)
+ .text          0x0000000926200000        0x5 /tmp/ccnkU6fr.o
+                0x0000000926200000                _start
+ .text          0x0000000926200005       0x2e /tmp/ccKL7M6K.o
+                0x0000000926200005                syscall
+                0x0000000926200008                syscall_macro
+ .text.notify   0x0000000926200033       0x34 build/debug.o
+                0x0000000926200033                notify
+ .text.install_payload
+                0x0000000926200067      0x1be build/main.o
+                0x0000000926200067                install_payload
+ .text._main    0x0000000926200225       0xa5 build/main.o
+                0x0000000926200225                _main
+ .text          0x00000009262002ca       0x30 build/ps4.o
+                0x00000009262002ca                unlink
+                0x00000009262002d6                kexec
+                0x00000009262002e2                mkdir
+                0x00000009262002ee                getFunctionAddressByName
+ .text.loadModule
+                0x00000009262002fa       0x1a build/ps4.o
+                0x00000009262002fa                loadModule
+ .text.initKernel
+                0x0000000926200314       0x7e build/ps4.o
+                0x0000000926200314                initKernel
+ .text.initLibc
+                0x0000000926200392       0x5c build/ps4.o
+                0x0000000926200392                initLibc
+ .text.initSysUtil
+                0x00000009262003ee       0x30 build/ps4.o
+                0x00000009262003ee                initSysUtil
+
+.iplt           0x0000000926200420        0x0
+ .iplt          0x0000000926200420        0x0 /tmp/ccnkU6fr.o
+
+.rodata         0x0000000926200420     0x17cd
+ *(.rodata)
+ .rodata        0x0000000926200420     0x16a4 build/embed.o
+                0x0000000926200420                kpayload
+                0x0000000926201ac0                kpayload_size
+ *(.rodata*)
+ .rodata.str1.1
+                0x0000000926201ac4        0xa build/debug.o
+ .rodata.str1.1
+                0x0000000926201ace       0x4c build/main.o
+ .rodata.str1.1
+                0x0000000926201b1a       0xd3 build/ps4.o
+
+.eh_frame_hdr   0x0000000926201bf0        0x0
+ .eh_frame_hdr  0x0000000926201bf0        0x0 build/debug.o
+
+.rela.dyn       0x0000000926201bf0        0x0
+ .rela.iplt     0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+ .rela.text     0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+ .rela.text.notify
+                0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+ .rela.text.install_payload
+                0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+ .rela.text._main
+                0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+ .rela.text.initKernel
+                0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+ .rela.text.initLibc
+                0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+ .rela.text.initSysUtil
+                0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+
+.data
+ *(.data)
+
+.igot.plt       0x0000000926201bf0        0x0
+ .igot.plt      0x0000000926201bf0        0x0 /tmp/ccnkU6fr.o
+
+.bss            0x0000000926201bf0       0x30
+ *(.bss)
+ COMMON         0x0000000926201bf0       0x30 build/ps4.o
+                0x0000000926201bf0                memcpy
+                0x0000000926201bf8                sceSysUtilSendSystemNotificationWithText
+                0x0000000926201c00                __error
+                0x0000000926201c08                sceKernelLoadStartModule
+                0x0000000926201c10                memset
+                0x0000000926201c18                sprintf
+
+/DISCARD/
+ *(.comment)
+ *(.note.GNU-stack)
+ *(.eh_frame)
+OUTPUT(temp.t elf64-x86-64)

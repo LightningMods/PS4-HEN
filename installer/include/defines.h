@@ -1,7 +1,7 @@
 #ifndef __DEFINES
 #define __DEFINES
 
-#define VERSION "1.5"
+#define VERSION "1.8"
 
 //#define DEBUG_SOCKET
 
@@ -55,23 +55,9 @@ struct payload_info
   size_t size;
 };
 
-struct real_info
-{
-  const size_t kernel_offset;
-  const size_t payload_offset;
-};
-
-struct disp_info
-{
-  const size_t call_offset;
-  const size_t payload_offset;
-};
-
 struct payload_header
 {
   uint64_t signature;
-  size_t real_info_offset;
-  size_t disp_info_offset;
   size_t entrypoint_offset;
 };
 
@@ -79,12 +65,6 @@ struct install_payload_args
 {
   void* syscall_handler;
   struct payload_info* payload_info;
-};
-
-struct kernel_payload_args
-{
-  void* syscall_handler;
-  uint64_t user_arg;
 };
 
 static inline __attribute__((always_inline)) uint64_t __readmsr(unsigned long __register)
