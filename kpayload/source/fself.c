@@ -3,26 +3,36 @@
 
 #include "sections.h"
 #include "sparse.h"
+#include "offsets.h"
 #include "freebsd_helper.h"
 #include "elf_helper.h"
 #include "self_helper.h"
 #include "sbl_helper.h"
+#include "amd_helper.h"
 
 #define PAGE_SIZE 0x4000
 
-extern void* (*real_malloc)(unsigned long size, void* type, int flags) PAYLOAD_BSS;
-extern void (*real_free)(void* addr, void* type) PAYLOAD_BSS;
-extern void* (*real_memcpy)(void* dst, const void* src, size_t len) PAYLOAD_BSS;
+extern void* (*malloc)(unsigned long size, void* type, int flags) PAYLOAD_BSS;
+extern void (*free)(void* addr, void* type) PAYLOAD_BSS;
+extern void* (*memcpy)(void* dst, const void* src, size_t len) PAYLOAD_BSS;
+extern size_t (*strlen)(const char *str) PAYLOAD_BSS;
+extern char * (*strstr) (const char *haystack, const char *needle) PAYLOAD_BSS;
 
 extern void* M_TEMP PAYLOAD_BSS;
 extern struct sbl_map_list_entry** sbl_driver_mapped_pages PAYLOAD_BSS;
 extern uint8_t* mini_syscore_self_binary PAYLOAD_BSS;
+extern struct malloc_type* M_IOV PAYLOAD_BSS;
+extern struct cdev** console_cdev PAYLOAD_BSS;
 
-extern int (*real_sceSblServiceMailbox)(unsigned long service_id, uint8_t request[SBL_MSG_SERVICE_MAILBOX_MAX_SIZE], void* response) PAYLOAD_BSS;
-extern int (*real_sceSblAuthMgrGetSelfInfo)(struct self_context* ctx, struct self_ex_info** info) PAYLOAD_BSS;
-extern void (*real_sceSblAuthMgrSmStart)(void**) PAYLOAD_BSS;
-extern int (*real_sceSblAuthMgrIsLoadable2)(struct self_context* ctx, struct self_auth_info* old_auth_info, int path_id, struct self_auth_info* new_auth_info) PAYLOAD_BSS;
-extern int (*real_sceSblAuthMgrVerifyHeader)(struct self_context* ctx) PAYLOAD_BSS;
+extern int (*sceSblServiceMailbox)(unsigned long service_id, uint8_t request[SBL_MSG_SERVICE_MAILBOX_MAX_SIZE], void* response) PAYLOAD_BSS;
+extern int (*sceSblAuthMgrGetSelfInfo)(struct self_context* ctx, struct self_ex_info** info) PAYLOAD_BSS;
+extern void (*sceSblAuthMgrSmStart)(void**) PAYLOAD_BSS;
+extern int (*sceSblAuthMgrIsLoadable2)(struct self_context* ctx, struct self_auth_info* old_auth_info, int path_id, struct self_auth_info* new_auth_info) PAYLOAD_BSS;
+extern int (*sceSblAuthMgrVerifyHeader)(struct self_context* ctx) PAYLOAD_BSS;
+extern int (*sceSblACMgrGetPathId) (const char* path) PAYLOAD_BSS;
+extern int (*console_write) (struct cdev* dev, struct uio* uio, int ioflag) PAYLOAD_BSS;
+extern int (*deci_tty_write) (struct cdev* dev, struct uio* uio, int ioflag) PAYLOAD_BSS;
+extern struct uio* (*cloneuio) (struct uio* uiop) PAYLOAD_BSS;
 
 static const uint8_t s_auth_info_for_exec[] PAYLOAD_RDATA =
 {
@@ -52,12 +62,12 @@ static const uint8_t s_auth_info_for_dynlib[] PAYLOAD_RDATA =
 
 PAYLOAD_CODE static inline void* alloc(uint32_t size)
 {
-  return real_malloc(size, M_TEMP, 2);
+  return malloc(size, M_TEMP, 2);
 }
 
 PAYLOAD_CODE static inline void dealloc(void* addr)
 {
-  real_free(addr, M_TEMP);
+  free(addr, M_TEMP);
 }
 
 PAYLOAD_CODE static struct sbl_map_list_entry* sceSblDriverFindMappedPageListByGpuVa(vm_offset_t gpu_va)
@@ -104,7 +114,7 @@ PAYLOAD_CODE static inline int sceSblAuthMgrGetSelfAuthInfoFake(struct self_cont
     fake_info = (struct self_fake_auth_info*)(ctx->header + hdr->header_size + hdr->meta_size - 0x100);
     if (fake_info->size == sizeof(fake_info->info))
     {
-      real_memcpy(info, &fake_info->info, sizeof(*info));
+      memcpy(info, &fake_info->info, sizeof(*info));
       return 0;
     }
     return -37;
@@ -120,7 +130,7 @@ PAYLOAD_CODE static inline int is_fake_self(struct self_context* ctx)
   struct self_ex_info* ex_info;
   if (ctx && ctx->format == SELF_FORMAT_SELF)
   {
-    if (real_sceSblAuthMgrGetSelfInfo(ctx, &ex_info))
+    if (sceSblAuthMgrGetSelfInfo(ctx, &ex_info))
     {
       return 0;
     }
@@ -181,7 +191,7 @@ PAYLOAD_CODE static inline int build_self_auth_info_fake(struct self_context* ct
     goto error;
   }
 
-  result = real_sceSblAuthMgrGetSelfInfo(ctx, &ex_info);
+  result = sceSblAuthMgrGetSelfInfo(ctx, &ex_info);
   if (result)
   {
     goto error;
@@ -208,14 +218,14 @@ PAYLOAD_CODE static inline int build_self_auth_info_fake(struct self_context* ct
       case ELF_ET_SCE_EXEC:
       case ELF_ET_SCE_EXEC_ASLR:
       {
-        real_memcpy(&fake_auth_info, s_auth_info_for_exec, sizeof(fake_auth_info));
+        memcpy(&fake_auth_info, s_auth_info_for_exec, sizeof(fake_auth_info));
         result = 0;
         break;
       }
 
       case ELF_ET_SCE_DYNAMIC:
       {
-        real_memcpy(&fake_auth_info, s_auth_info_for_dynlib, sizeof(fake_auth_info));
+        memcpy(&fake_auth_info, s_auth_info_for_dynlib, sizeof(fake_auth_info));
         result = 0;
         break;
       }
@@ -234,7 +244,7 @@ PAYLOAD_CODE static inline int build_self_auth_info_fake(struct self_context* ct
 
   if (auth_info)
   {
-    real_memcpy(auth_info, &fake_auth_info, sizeof(*auth_info));
+    memcpy(auth_info, &fake_auth_info, sizeof(*auth_info));
   }
 
 error:
@@ -269,18 +279,18 @@ PAYLOAD_CODE static inline int auth_self_header(struct self_context* ctx)
     }
 
     /* temporarily swap an our header with a header from a real SELF file */
-    real_memcpy(tmp, ctx->header, new_total_header_size);
-    real_memcpy(ctx->header, hdr, new_total_header_size);
+    memcpy(tmp, ctx->header, new_total_header_size);
+    memcpy(ctx->header, hdr, new_total_header_size);
 
     /* it's now SELF, not ELF or whatever... */
     ctx->format = SELF_FORMAT_SELF;
     ctx->total_header_size = new_total_header_size;
 
     /* call the original method using a real SELF file */
-    result = real_sceSblAuthMgrVerifyHeader(ctx);
+    result = sceSblAuthMgrVerifyHeader(ctx);
 
     /* restore everything we did before */
-    real_memcpy(ctx->header, tmp, new_total_header_size);
+    memcpy(ctx->header, tmp, new_total_header_size);
     ctx->format = old_format;
     ctx->total_header_size = old_total_header_size;
 
@@ -288,7 +298,7 @@ PAYLOAD_CODE static inline int auth_self_header(struct self_context* ctx)
   }
   else
   {
-    result = real_sceSblAuthMgrVerifyHeader(ctx);
+    result = sceSblAuthMgrVerifyHeader(ctx);
   }
 
 error:
@@ -303,20 +313,20 @@ PAYLOAD_CODE int my_sceSblAuthMgrIsLoadable2(struct self_context* ctx, struct se
   }
   else
   {
-    return real_sceSblAuthMgrIsLoadable2(ctx, old_auth_info, path_id, new_auth_info);
+    return sceSblAuthMgrIsLoadable2(ctx, old_auth_info, path_id, new_auth_info);
   }
 }
 
 PAYLOAD_CODE int my_sceSblAuthMgrVerifyHeader(struct self_context* ctx)
 {
   void* dummy;
-  real_sceSblAuthMgrSmStart(&dummy);
+  sceSblAuthMgrSmStart(&dummy);
   return auth_self_header(ctx);
 }
 
 PAYLOAD_CODE int my_sceSblAuthMgrSmLoadSelfSegment__sceSblServiceMailbox(unsigned long service_id, uint8_t* request, void* response)
 {
-  register struct self_context* ctx __asm ("r14");
+  register struct self_context* ctx __asm ("r14"); // 5.05
   int is_unsigned = ctx && is_fake_self(ctx);
 
   if (is_unsigned)
@@ -324,13 +334,13 @@ PAYLOAD_CODE int my_sceSblAuthMgrSmLoadSelfSegment__sceSblServiceMailbox(unsigne
     *(int*)(response + 0x04) = 0; /* setting error field to zero, thus we have no errors */
     return 0;
   }
-  return real_sceSblServiceMailbox(service_id, request, response);
+  return sceSblServiceMailbox(service_id, request, response);
 }
 
 PAYLOAD_CODE int my_sceSblAuthMgrSmLoadSelfBlock__sceSblServiceMailbox(unsigned long service_id, uint8_t* request, void* response)
 {
   uint8_t* frame = (uint8_t*)__builtin_frame_address(1);
-  struct self_context* ctx = *(struct self_context**)(frame - 0x1C8);
+  struct self_context* ctx = *(struct self_context**)(frame - 0x1C8); // 5.05
   vm_offset_t segment_data_gpu_va = *(unsigned long*)(request + 0x08);
   vm_offset_t cur_data_gpu_va = *(unsigned long*)(request + 0x50);
   vm_offset_t cur_data2_gpu_va = *(unsigned long*)(request + 0x58);
@@ -355,12 +365,12 @@ PAYLOAD_CODE int my_sceSblAuthMgrSmLoadSelfBlock__sceSblServiceMailbox(unsigned 
       {
         /* data spans two consecutive memory's pages, so we need to copy twice */
         size1 = PAGE_SIZE - data_offset;
-        real_memcpy((char*)segment_data_cpu_va, (char*)cur_data_cpu_va + data_offset, size1);
-        real_memcpy((char*)segment_data_cpu_va + size1, (char*)cur_data2_cpu_va, data_size - size1);
+        memcpy((char*)segment_data_cpu_va, (char*)cur_data_cpu_va + data_offset, size1);
+        memcpy((char*)segment_data_cpu_va + size1, (char*)cur_data2_cpu_va, data_size - size1);
       }
       else
       {
-        real_memcpy((char*)segment_data_cpu_va, (char*)cur_data_cpu_va + data_offset, data_size);
+        memcpy((char*)segment_data_cpu_va, (char*)cur_data_cpu_va + data_offset, data_size);
       }
     }
 
@@ -369,8 +379,63 @@ PAYLOAD_CODE int my_sceSblAuthMgrSmLoadSelfBlock__sceSblServiceMailbox(unsigned 
   }
   else
   {
-    result = real_sceSblServiceMailbox(service_id, request, response);
+    result = sceSblServiceMailbox(service_id, request, response);
   }
 
   return result;
+}
+
+PAYLOAD_CODE int my_sceSblAuthMgrIsLoadable__sceSblACMgrGetPathId(const char* path) {
+	static const char* self_dir_prefix = "/data/self/";
+	const char* p;
+	int ret;
+
+	if (path) {
+		p = strstr(path, self_dir_prefix);
+		if (p)
+			path = p + strlen(self_dir_prefix);
+	}
+
+	ret = sceSblACMgrGetPathId(path);
+
+	return ret;
+}
+
+PAYLOAD_CODE int deci_tty_write__hook(struct cdev* dev, struct uio* uio, int ioflag) {
+	struct uio* cloned_uio = NULL;
+	int ret;
+
+	cloned_uio = cloneuio(uio);
+
+	ret = deci_tty_write(dev, uio, ioflag);
+
+	if (cloned_uio) {
+		if (*console_cdev)
+			console_write(*console_cdev, cloned_uio, ioflag);
+		free(cloned_uio, M_IOV);
+	}
+
+	return ret;
+}
+
+PAYLOAD_CODE void install_fself_hooks()
+{
+  uint64_t flags, cr0;
+  uint64_t kernbase = getkernbase();
+
+  cr0 = readCr0();
+  writeCr0(cr0 & ~X86_CR0_WP);
+  flags = intr_disable();
+
+  KCALL_REL32(kernbase, sceSblAuthMgrIsLoadable2_hook, (uint64_t)my_sceSblAuthMgrIsLoadable2);
+  KCALL_REL32(kernbase, sceSblAuthMgrVerifyHeader_hook1, (uint64_t)my_sceSblAuthMgrVerifyHeader);
+  KCALL_REL32(kernbase, sceSblAuthMgrVerifyHeader_hook2, (uint64_t)my_sceSblAuthMgrVerifyHeader);
+  KCALL_REL32(kernbase, sceSblAuthMgrSmLoadSelfSegment__sceSblServiceMailbox_hook, (uint64_t)my_sceSblAuthMgrSmLoadSelfSegment__sceSblServiceMailbox);
+  KCALL_REL32(kernbase, sceSblAuthMgrSmLoadSelfBlock__sceSblServiceMailbox_hook, (uint64_t)my_sceSblAuthMgrSmLoadSelfBlock__sceSblServiceMailbox);
+  KCALL_REL32(kernbase, sceSblAuthMgrIsLoadable__sceSblACMgrGetPathId__hook, (uint64_t)my_sceSblAuthMgrIsLoadable__sceSblACMgrGetPathId);
+  *(uint64_t*)(kernbase + 0x19FC168) = (uint64_t)&deci_tty_write__hook;
+
+
+  intr_restore(flags);
+  writeCr0(cr0);
 }

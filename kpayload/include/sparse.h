@@ -19,4 +19,8 @@
 #define TYPE_CHECK_FIELD_SIZE(name, member, size) \
   _Static_assert(sizeof(((name*)0)->member) == (size), "Size of " #name "." #member " != " #size)
 
+#define COUNT_OF(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
+
+#define KCALL_REL32(k, src, dest) do { *(uint32_t *)(k + src + 1) = (dest - src - k - 5); } while(0);
+
 #endif
