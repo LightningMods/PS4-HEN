@@ -28,6 +28,7 @@ extern void (*sceSblAuthMgrSmStart)(void**) PAYLOAD_BSS;
 extern int (*sceSblAuthMgrIsLoadable2)(struct self_context* ctx, struct self_auth_info* old_auth_info, int path_id, struct self_auth_info* new_auth_info) PAYLOAD_BSS;
 extern int (*sceSblAuthMgrVerifyHeader)(struct self_context* ctx) PAYLOAD_BSS;
 extern int (*sceSblACMgrGetPathId) (const char* path) PAYLOAD_BSS;
+extern int (*deci_tty_write) (struct cdev* dev, struct uio* uio, int ioflag) PAYLOAD_BSS;
 
 static const uint8_t s_auth_info_for_exec[] PAYLOAD_RDATA =
 {
@@ -312,6 +313,23 @@ PAYLOAD_CODE int my_sceSblAuthMgrIsLoadable2(struct self_context* ctx, struct se
   }
 }
 
+PAYLOAD_CODE int deci_tty_write__hook(struct cdev* dev, struct uio* uio, int ioflag) {
+	struct uio* cloned_uio = NULL;
+	int ret;
+
+	cloned_uio = cloneuio(uio);
+
+	ret = deci_tty_write(dev, uio, ioflag);
+
+	if (cloned_uio) {
+		if (*console_cdev)
+			console_write(*console_cdev, cloned_uio, ioflag);
+		free(cloned_uio, M_IOV);
+	}
+
+	return ret;
+}
+
 PAYLOAD_CODE int my_sceSblAuthMgrVerifyHeader(struct self_context* ctx)
 {
   void* dummy;
@@ -411,7 +429,8 @@ PAYLOAD_CODE void install_fself_hooks()
   KCALL_REL32(kernbase, sceSblAuthMgrSmLoadSelfSegment__sceSblServiceMailbox_hook, (uint64_t)my_sceSblAuthMgrSmLoadSelfSegment__sceSblServiceMailbox);
   KCALL_REL32(kernbase, sceSblAuthMgrSmLoadSelfBlock__sceSblServiceMailbox_hook, (uint64_t)my_sceSblAuthMgrSmLoadSelfBlock__sceSblServiceMailbox);
   KCALL_REL32(kernbase, sceSblAuthMgrIsLoadable__sceSblACMgrGetPathId__hook, (uint64_t)my_sceSblAuthMgrIsLoadable__sceSblACMgrGetPathId);
-
+  KCALL_REL32(kernbase, 0x19FC168, (uint64_t)deci_tty_write__hook);
+	
   intr_restore(flags);
   writeCr0(cr0);
 }
