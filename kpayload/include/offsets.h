@@ -58,6 +58,7 @@
 #define vm_map_lock_read_addr           0x19F140
 #define vm_map_unlock_read_addr         0x19F190
 #define vm_map_lookup_entry_addr        0x19F760
+	#define disable_screenshot_patch		0x0CB8C6
 
 // Fself hooks
 #define sceSblAuthMgrIsLoadable2_hook                             0x63E3A1
